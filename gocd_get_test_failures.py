@@ -1,4 +1,13 @@
-#!/usr/bin/env python
+"""Usage:
+  gocd-get-test-failures BUILD [--format=FORMAT]
+
+Example:
+  gocd-get-test-failures dev-website-ci-5/2275
+
+Options:
+  --format=FORMAT  Output format: org or json [default: json].
+  -h --help        Show this help.
+"""
 from __future__ import print_function
 from __future__ import unicode_literals
 
@@ -12,6 +21,7 @@ from operator import itemgetter
 
 import lxml.etree
 import requests
+from docopt import docopt
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 
@@ -31,17 +41,13 @@ PIPELINES = {
 
 
 def main():
-    n_args = len(sys.argv[1:])
+    arguments = docopt(__doc__)
 
-    build = sys.argv[1]
-    if n_args == 1:
-        output_format = 'json'
-    elif n_args == 2:
-        output_format = sys.argv[2]
+    if arguments['--format'] not in {'json', 'org'}:
+        raise ValueError('Invalid output format: %s' % arguments['--format'])
 
-    assert output_format in {'json', 'org'}
-
-    print_test_failures(get_test_failures(build), output_format)
+    failures = get_test_failures(arguments['BUILD'])
+    print_test_failures(failures, arguments['--format'])
 
 
 def get_test_failures(build):
@@ -103,9 +109,6 @@ def _get_all_nosetest_xmls(build):
         else:
             resp.raise_for_status()
             yield resp.content
-
-        if run > 2:
-            raise StopIteration
 
 
 def _get_pipeline_data(build):
