@@ -49,6 +49,7 @@ PIPELINES = {
 
 
 def main():
+
     arguments = docopt(__doc__)
 
     if arguments['--show-pipelines']:
@@ -58,8 +59,16 @@ def main():
     if arguments['--format'] not in {'json', 'org'}:
         raise ValueError('Invalid output format: %s' % arguments['--format'])
 
+    if not (os.getenv('GOCD_USER') and os.getenv('GOCD_PASSWORD')):
+        usage()
+
     failures = get_test_failures(arguments['BUILD'])
     print_test_failures(failures, arguments['--format'])
+
+
+def usage():
+    sys.argv = [sys.argv[0], '--help']
+    docopt(__doc__)
 
 
 def get_test_failures(build):
