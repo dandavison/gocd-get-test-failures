@@ -4,7 +4,7 @@ GoCD credentials must be stored as shell environment variables:
   export GOCD_USER=my_username GOCD_PASSWORD=my_password
 
 Usage:
-  gocd-get-test-failures BUILD [--format=FORMAT]
+  gocd-get-test-failures BUILD [--format=FORMAT] [--stage=STAGE] [--job=JOB]
   gocd-get-test-failures --show-pipelines
 
 Example:
@@ -14,6 +14,8 @@ Example:
 Options:
   --format=FORMAT   Output format: org or json [default: json].
   --show-pipelines  Show stage/job names for known pipelines.
+  --stage=STAGE     Set stage name for pipeline.
+  --job=JOB         Set job name for pipeline.
   -h --help         Show this help.
 """
 from __future__ import print_function
@@ -48,22 +50,28 @@ PIPELINES = {
 }
 
 
+ARGUMENTS = None
+
+
 def main():
 
-    arguments = docopt(__doc__)
+    global ARGUMENTS
+    ARGUMENTS = docopt(__doc__)
 
-    if arguments['--show-pipelines']:
+    print(ARGUMENTS)
+
+    if ARGUMENTS['--show-pipelines']:
         print(json.dumps(PIPELINES, sort_keys=True, indent=2))
         sys.exit(0)
 
-    if arguments['--format'] not in {'json', 'org'}:
+    if ARGUMENTS['--format'] not in {'json', 'org'}:
         raise ValueError('Invalid output format: %s' % arguments['--format'])
 
     if not (os.getenv('GOCD_USER') and os.getenv('GOCD_PASSWORD')):
         usage()
 
-    failures = get_test_failures(arguments['BUILD'])
-    print_test_failures(failures, arguments['--format'])
+    failures = get_test_failures(ARGUMENTS['BUILD'])
+    print_test_failures(failures, ARGUMENTS['--format'])
 
 
 def usage():
@@ -139,7 +147,20 @@ def _get_pipeline_data(build):
     try:
         return PIPELINES[pipeline]
     except KeyError:
-        raise ValueError('Unsupported pipeline: %s' % build)
+        pipeline = {
+            'stage': ARGUMENTS['--stage'],
+            'job': ARGUMENTS['--job'],
+        }
+        if all(pipeline.values()):
+            return pipeline
+        else:
+            raise ValueError(
+                'Unsupported pipeline: %s\n '
+                'See --show-pipelines; '
+                'you may be able to use the --stage and --job options '
+                'to fetch test failures from an unsupported pipeline.'
+                % build
+            )
 
 
 def _get_failures(root):
