@@ -58,8 +58,6 @@ def main():
     global ARGUMENTS
     ARGUMENTS = docopt(__doc__)
 
-    print(ARGUMENTS)
-
     if ARGUMENTS['--show-pipelines']:
         print(json.dumps(PIPELINES, sort_keys=True, indent=2))
         sys.exit(0)
