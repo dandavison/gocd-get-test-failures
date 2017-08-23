@@ -1,8 +1,14 @@
-"""Usage:
+"""
+GoCD credentials must be stored as shell environment variables:
+
+  export GOCD_USER=my_username GOCD_PASSWORD=my_password
+
+Usage:
   gocd-get-test-failures BUILD [--format=FORMAT]
   gocd-get-test-failures --show-pipelines
 
 Example:
+  export GOCD_USER=my_username GOCD_PASSWORD=my_password
   gocd-get-test-failures dev-website-ci-5/2275
 
 Options:
