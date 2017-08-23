@@ -69,7 +69,7 @@ def main():
         usage()
 
     failures = get_test_failures(ARGUMENTS['BUILD'])
-    print_test_failures(failures, ARGUMENTS['--format'])
+    print(format_test_failures(failures, ARGUMENTS['--format']))
 
 
 def usage():
@@ -89,26 +89,30 @@ def get_test_failures(build):
     return failures
 
 
-def print_test_failures(failures, output_format):
+def format_test_failures(failures, output_format):
     failures = sorted(failures, key=itemgetter('test'))
     by_test_class = itertools.groupby(failures, itemgetter('test_class'))
 
     if output_format == 'json':
-        print(json.dumps(failures, sort_keys=True, indent=2))
+        return json.dumps(failures, sort_keys=True, indent=2)
 
     if output_format in {'md', 'markdown'}:
+        lines = []
         for test_class, failures in by_test_class:
-            print('### ' + test_class)
+            lines.append('### ' + test_class)
             for failure in failures:
-                print('#### ' + failure['test'])
-                print('```\n' + failure['traceback'].strip() + '\n```')
+                lines.append('#### ' + failure['test'])
+                lines.append('```\n' + failure['traceback'].strip() + '\n```')
+        return '\n'.join(lines)
 
     elif output_format == 'org':
+        lines = []
         for test_class, failures in by_test_class:
-            print('* ' + test_class)
+            lines.append('* ' + test_class)
             for failure in failures:
-                print('** ' + failure['test'])
-                print(failure['traceback'])
+                lines.append('** ' + failure['test'])
+                lines.append(failure['traceback'])
+        return '\n'.join(lines)
 
     else:
         raise ValueError('Invalid output format: %s' % output_format)
