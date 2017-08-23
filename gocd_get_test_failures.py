@@ -9,7 +9,7 @@ Usage:
 
 Example:
   export GOCD_USER=my_username GOCD_PASSWORD=my_password
-  gocd-get-test-failures dev-website-ci-5/2275
+  gocd-get-test-failures some-pipeline/2275
 
 Options:
   --format=FORMAT   Output format: org or json [default: json].
@@ -37,17 +37,8 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
-GOCD_HOST = os.getenv('GOCD_HOST') or 'go-cd.counsyl.com'
-PIPELINES = {
-    'dev-website-ci': {
-        'stage': 'test',
-        'job': 'unit',
-    },
-    'dev-website-all': {
-        'stage': 'lengthy-tests',
-        'job': 'lengthy',
-    },
-}
+GOCD_HOST = os.getenv('GOCD_HOST')
+PIPELINES = {}
 
 
 ARGUMENTS = None

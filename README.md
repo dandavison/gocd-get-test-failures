@@ -11,7 +11,7 @@ Usage:
 
 Example:
   export GOCD_USER=my_username GOCD_PASSWORD=my_password
-  gocd-get-test-failures dev-website-ci-5/2275
+  gocd-get-test-failures some-pipeline/2275
 
 Options:
   --format=FORMAT   Output format: org or json [default: json].
