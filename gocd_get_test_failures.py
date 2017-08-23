@@ -12,7 +12,7 @@ Example:
   gocd-get-test-failures dev-website-ci-5/2275
 
 Options:
-  --format=FORMAT   Output format: org or json [default: org].
+  --format=FORMAT   Output format: 'org', 'md' or 'json' [default: org].
   --show-pipelines  Show stage/job names for known pipelines.
   --stage=STAGE     Set stage name for pipeline.
   --job=JOB         Set job name for pipeline.
@@ -62,7 +62,7 @@ def main():
         print(json.dumps(PIPELINES, sort_keys=True, indent=2))
         sys.exit(0)
 
-    if ARGUMENTS['--format'] not in {'json', 'org'}:
+    if ARGUMENTS['--format'] not in {'json', 'org', 'md', 'markdown'}:
         raise ValueError('Invalid output format: %s' % arguments['--format'])
 
     if not (os.getenv('GOCD_USER') and os.getenv('GOCD_PASSWORD')):
@@ -91,15 +91,25 @@ def get_test_failures(build):
 
 def print_test_failures(failures, output_format):
     failures = sorted(failures, key=itemgetter('test'))
+    by_test_class = itertools.groupby(failures, itemgetter('test_class'))
+
     if output_format == 'json':
         print(json.dumps(failures, sort_keys=True, indent=2))
+
+    if output_format in {'md', 'markdown'}:
+        for test_class, failures in by_test_class:
+            print('### ' + test_class)
+            for failure in failures:
+                print('#### ' + failure['test'])
+                print('```\n' + failure['traceback'].strip() + '\n```')
+
     elif output_format == 'org':
-        by_test_class = itertools.groupby(failures, itemgetter('test_class'))
         for test_class, failures in by_test_class:
             print('* ' + test_class)
             for failure in failures:
                 print('** ' + failure['test'])
                 print(failure['traceback'])
+
     else:
         raise ValueError('Invalid output format: %s' % output_format)
 
