@@ -1,12 +1,14 @@
 """Usage:
   gocd-get-test-failures BUILD [--format=FORMAT]
+  gocd-get-test-failures --show-pipelines
 
 Example:
   gocd-get-test-failures dev-website-ci-5/2275
 
 Options:
-  --format=FORMAT  Output format: org or json [default: json].
-  -h --help        Show this help.
+  --format=FORMAT   Output format: org or json [default: json].
+  --show-pipelines  Show stage/job names for known pipelines.
+  -h --help         Show this help.
 """
 from __future__ import print_function
 from __future__ import unicode_literals
@@ -42,6 +44,10 @@ PIPELINES = {
 
 def main():
     arguments = docopt(__doc__)
+
+    if arguments['--show-pipelines']:
+        print(json.dumps(PIPELINES, sort_keys=True, indent=2))
+        sys.exit(0)
 
     if arguments['--format'] not in {'json', 'org'}:
         raise ValueError('Invalid output format: %s' % arguments['--format'])
