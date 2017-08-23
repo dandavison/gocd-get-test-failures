@@ -12,7 +12,7 @@ Example:
   gocd-get-test-failures dev-website-ci-5/2275
 
 Options:
-  --format=FORMAT   Output format: 'org', 'md', 'html' or 'json' [default: org].
+  --format=FORMAT   Output format: 'html', 'json', 'md', or 'org'  [default: html].
   --show-pipelines  Show stage/job names for known pipelines.
   --stage=STAGE     Set stage name for pipeline.
   --job=JOB         Set job name for pipeline.
