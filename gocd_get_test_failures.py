@@ -12,7 +12,7 @@ Example:
   gocd-get-test-failures dev-website-ci-5/2275
 
 Options:
-  --format=FORMAT   Output format: 'org', 'md' or 'json' [default: org].
+  --format=FORMAT   Output format: 'org', 'md', 'html' or 'json' [default: org].
   --show-pipelines  Show stage/job names for known pipelines.
   --stage=STAGE     Set stage name for pipeline.
   --job=JOB         Set job name for pipeline.
@@ -30,6 +30,7 @@ import warnings
 from operator import itemgetter
 
 import lxml.etree
+import markdown
 import requests
 from docopt import docopt
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -62,7 +63,7 @@ def main():
         print(json.dumps(PIPELINES, sort_keys=True, indent=2))
         sys.exit(0)
 
-    if ARGUMENTS['--format'] not in {'json', 'org', 'md', 'markdown'}:
+    if ARGUMENTS['--format'] not in {'html', 'json', 'markdown', 'md', 'org'}:
         raise ValueError('Invalid output format: %s' % arguments['--format'])
 
     if not (os.getenv('GOCD_USER') and os.getenv('GOCD_PASSWORD')):
@@ -113,6 +114,12 @@ def format_test_failures(failures, output_format):
                 lines.append('** ' + failure['test'])
                 lines.append(failure['traceback'])
         return '\n'.join(lines)
+
+    elif output_format == 'html':
+        return markdown.markdown(
+            format_test_failures(failures, 'md'),
+            extensions=['fenced_code'],
+        )
 
     else:
         raise ValueError('Invalid output format: %s' % output_format)
