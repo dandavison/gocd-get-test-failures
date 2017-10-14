@@ -8,7 +8,7 @@ with open('./requirements.txt') as fp:
 setup(
     name='gocd-get-test-failures',
     author='Dan Davison',
-    author_email='dan@counsyl.com',
+    author_email='dandavison7@gmail.com',
     description="A command-line tool to fetch test output from GoCD",
     packages=find_packages(),
     include_package_data=True,
