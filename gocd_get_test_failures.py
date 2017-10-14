@@ -12,7 +12,7 @@ Example:
   gocd-get-test-failures some-pipeline/2275
 
 Options:
-  --format=FORMAT   Output format: org or json [default: json].
+  --format=FORMAT   Output format: 'html', 'json', 'md', or 'org'  [default: html].
   --show-pipelines  Show stage/job names for known pipelines.
   --stage=STAGE     Set stage name for pipeline.
   --job=JOB         Set job name for pipeline.
@@ -30,6 +30,7 @@ import warnings
 from operator import itemgetter
 
 import lxml.etree
+import markdown
 import requests
 from docopt import docopt
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -53,14 +54,14 @@ def main():
         print(json.dumps(PIPELINES, sort_keys=True, indent=2))
         sys.exit(0)
 
-    if ARGUMENTS['--format'] not in {'json', 'org'}:
+    if ARGUMENTS['--format'] not in {'html', 'json', 'markdown', 'md', 'org'}:
         raise ValueError('Invalid output format: %s' % arguments['--format'])
 
     if not (os.getenv('GOCD_USER') and os.getenv('GOCD_PASSWORD')):
         usage()
 
     failures = get_test_failures(ARGUMENTS['BUILD'])
-    print_test_failures(failures, ARGUMENTS['--format'])
+    print(format_test_failures(failures, ARGUMENTS['--format']))
 
 
 def usage():
@@ -80,17 +81,37 @@ def get_test_failures(build):
     return failures
 
 
-def print_test_failures(failures, output_format):
+def format_test_failures(failures, output_format):
     failures = sorted(failures, key=itemgetter('test'))
+    by_test_class = itertools.groupby(failures, itemgetter('test_class'))
+
     if output_format == 'json':
-        print(json.dumps(failures, sort_keys=True, indent=2))
-    elif output_format == 'org':
-        by_test_class = itertools.groupby(failures, itemgetter('test_class'))
+        return json.dumps(failures, sort_keys=True, indent=2)
+
+    if output_format in {'md', 'markdown'}:
+        lines = []
         for test_class, failures in by_test_class:
-            print('* ' + test_class)
+            lines.append('### ' + test_class)
             for failure in failures:
-                print('** ' + failure['test'])
-                print(failure['traceback'])
+                lines.append('#### ' + failure['test'])
+                lines.append('```\n' + failure['traceback'].strip() + '\n```')
+        return '\n'.join(lines)
+
+    elif output_format == 'org':
+        lines = []
+        for test_class, failures in by_test_class:
+            lines.append('* ' + test_class)
+            for failure in failures:
+                lines.append('** ' + failure['test'])
+                lines.append(failure['traceback'])
+        return '\n'.join(lines)
+
+    elif output_format == 'html':
+        return markdown.markdown(
+            format_test_failures(failures, 'md'),
+            extensions=['fenced_code'],
+        )
+
     else:
         raise ValueError('Invalid output format: %s' % output_format)
 
