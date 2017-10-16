@@ -21,6 +21,7 @@ Options:
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import asyncio
 import json
 import itertools
 import os
@@ -29,9 +30,11 @@ import sys
 import warnings
 from operator import itemgetter
 
+import aiohttp
 import lxml.etree
 import markdown
 import requests
+import toolz
 from docopt import docopt
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
@@ -118,7 +121,7 @@ def format_test_failures(failures, output_format):
 
 def _get_all_nosetest_xmls(build):
     """
-    Generator yielding nosetest XML for all runs (until first 404 is encountered).
+    Return list of nosetest XMLs for all runs (until first 404 is encountered).
     """
     run_path = '{build}/{stage}/1/{job}-runInstance-{run}'
     url = ('https://{user}:{password}@{host}/go/files/' +
@@ -137,17 +140,45 @@ def _get_all_nosetest_xmls(build):
     assert context['user'], 'Missing environment variable GOCD_USER'
     assert context['password'], 'Missing environment variable GOCD_PASSWORD'
 
-    for run in itertools.count(1):
-        context['run'] = run
-        print(run_path.format(**context), file=sys.stderr)
-        resp = requests.get(url.format(**context), verify=False)
-        if resp.status_code == 404:
-            context['password'] = '********'
-            assert run > 1, '404 for first run URL: %s' % url.format(**context)
-            raise StopIteration
-        else:
-            resp.raise_for_status()
-            yield resp.content
+    # URLs are of the form /something/anotherthing/<run>
+
+    # We do not know the set of valid URLs. I.e., we do not know the maximum
+    # valid value of `run` after which all URLs will be 404s.  Instead, we keep
+    # trying increasing values of `run` until we start getting 404s. Since we
+    # do not know the maximum valid value of run a priori, we cannot create
+    # tasks for fetching all valid URLs. Instead we create an initial chunk of
+    # tasks, run these concurrently, and then if we haven't started
+    # encountering 404s, move on to the next chunk.
+    xmls = []
+    seen_404 = False
+
+    async def get_xml(run):
+        nonlocal context, seen_404
+        context = dict(context, run=run)
+        conn = aiohttp.TCPConnector(verify_ssl=False)
+        async with aiohttp.ClientSession(connector=conn) as session:
+            resp = await session.get(url.format(**context))
+            if resp.status == 404:
+                # We expect to see 404s eventually, but a 404 for the first
+                # value of `run` probably means that something is wrong.
+                assert run > 1, ('Unexpected 404: %s' %
+                                 url.format(**dict(context, password='********')))
+                seen_404 = True
+            else:
+                resp.raise_for_status()
+                data = await resp.content.read()
+                xmls.append(data)
+
+    chunk_size = 30
+    ioloop = asyncio.get_event_loop()
+    for run_chunk in toolz.partition_all(chunk_size, itertools.count(1)):
+        task = asyncio.wait([get_xml(run) for run in run_chunk])
+        ioloop.run_until_complete(task)
+        if seen_404:
+            ioloop.close()
+            break
+
+    return xmls
 
 
 def _get_pipeline_data(build):
